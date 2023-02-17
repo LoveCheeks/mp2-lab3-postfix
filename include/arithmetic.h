@@ -1,15 +1,15 @@
 #include <string>
-#include "stack.h"
+#include "../include/stack.h"
 #include <map>
 
 class lexException : public std::exception {
 private:
 	std::string error_message;
 public:
-	lexException(std::string err_msg, std::string eq, size_T err_id) : error_message(err_msg)
+	lexException(std::string err_msg, std::string eq, size_t err_id) : error_message(err_msg)
 	{
 		error_message += '\n' + eq + '\n';
-		for (size_T i = 0; i < err_id; i++)
+		for (size_t i = 0; i < err_id; i++)
 			error_message += " ";
 		error_message += '^';
 	}
@@ -23,8 +23,8 @@ public:
 class Lexems {
 public:
 	Lexems();
-	virtual std::string what_is() = 0;
-	virtual size_T prioritet() = 0;
+	virtual std::string whatis() = 0;
+	virtual size_t prioritet() = 0;
 	virtual void ToDo(Stack<double>& S) = 0;
 	virtual std::string show() = 0;
 	virtual ~Lexems();
@@ -33,11 +33,11 @@ public:
 class Operator : public Lexems {
 private:
 	std::string lex;
-	size_T priority;
+	size_t priority;
 public:
 	Operator(char _lex);
-	size_T prioritet() override;
-	std::string what_is() override;
+	size_t prioritet() override;
+	std::string whatis() override;
 	void ToDo(Stack<double>& S) override;
 	std::string show() override;
 	~Operator();
@@ -48,8 +48,8 @@ private:
 	std::string lex;
 public:
 	Operand(std::string _lex);
-	size_T prioritet() override;
-	std::string what_is() override;
+	size_t prioritet() override;
+	std::string whatis() override;
 	void ToDo(Stack<double>& S) override;
 	std::string show() override;
 	~Operand();
@@ -60,8 +60,8 @@ private:
 	std::string lex;
 public:
 	Var(char _lex);
-	size_T prioritet() override;
-	std::string what_is() override;
+	size_t prioritet() override;
+	std::string whatis() override;
 	void ToDo(Stack<double>& S) override;
 	std::string show() override;
 	~Var();
@@ -75,13 +75,13 @@ private:
 	std::map<std::string, std::string> nameValue_var;
 	Lexems** infix_form;
 	Lexems** postfix_form;
-	size_T infix_size;
-	size_T postfix_size;
+	size_t infix_size;
+	size_t postfix_size;
 public:
 	TPostfix(std::string eq);
 	void init_infix();
 	void init_postfix();
-	void correctChecker(const size_T& i, const size_T index);
+	void correctChecker(const size_t& i, const size_t index);
 	double resolve();
 	std::string get_infixLexem();
 	std::string get_postfixLexem();

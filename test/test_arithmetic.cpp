@@ -1,19 +1,19 @@
-#include "gtest.h"
+#include <gtest.h>
 #include "arithmetic.h"
 
-TEST(class_Operand, make_operand)
+TEST(class_Operand, can_make_operand)
 {
 	ASSERT_NO_THROW(Operand("23432"));
 }
 
-TEST(class_Operand, what_operand)
+TEST(class_Operand, can_whatis_for_operand)
 {
 	Lexems* a[2];
 	a[0] = new Operand("34,54");
-	EXPECT_EQ("Operand", a[0]->what_is());
+	EXPECT_EQ("Operand", a[0]->whatis());
 }
 
-TEST(class_Operand, to_do_operand)
+TEST(class_Operand, can_todo_for_operand)
 {
 	Stack<double> S(2);
 	Lexems* a[2];
@@ -22,19 +22,19 @@ TEST(class_Operand, to_do_operand)
 	EXPECT_EQ(34.54, S.view_top());
 }
 
-TEST(class_Operator, make_operator)
+TEST(class_Operator, can_make_operator)
 {
 	ASSERT_NO_THROW(Operator('*'));
 }
 
-TEST(class_Operator, what_operator)
+TEST(class_Operator, can_whatis_for_operator)
 {
 	Lexems* a[1];
 	a[0] = new Operator('*');
-	EXPECT_EQ("Operator", a[0]->what_is());
+	EXPECT_EQ("Operator", a[0]->whatis());
 }
 
-TEST(class_Operator, to_do_operator)
+TEST(class_Operator, can_todo_for_operator)
 {
 	Stack<double> S(2);
 	S.push(3); S.push(5);
@@ -44,7 +44,7 @@ TEST(class_Operator, to_do_operator)
 	EXPECT_EQ(15, S.view_top());
 }
 
-TEST(class_Operator, division_by_zero)
+TEST(class_Operator, throw_when_divisionbyzero_in_todo_for_operator)
 {
 	Stack<double> S(2);
 	S.push(3); S.push(0);
@@ -66,23 +66,22 @@ TEST(class_Operator, can_prioritet)
 	EXPECT_EQ(3, a[4]->prioritet());
 }
 
-TEST(class_Operator, unidentified_operation)
+TEST(class_Operator, throw_when_unidentified_operations)
 {
 	ASSERT_ANY_THROW(Operator('&'));
 }
 
-TEST(class_Var, make_var)
+TEST(class_Var, can_make_var)
 {
 	ASSERT_NO_THROW(Var('x'));
 }
 
-TEST(class_Var, what_is_var)
+TEST(class_Var, can_whatis_for_var)
 {
 	Lexems* a[2];
 	a[0] = new Var('x');
-	EXPECT_EQ("Var", a[0]->what_is());
+	EXPECT_EQ("Var", a[0]->whatis());
 }
-
 
 TEST(Postfix, correct_posfix_constract)
 {

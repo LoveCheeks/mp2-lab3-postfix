@@ -1,539 +1,398 @@
-#include "arithmetic.h"
+#include <iostream>
+#include <map>
+#include <cmath>
+#include "../include/arithmetic.h"
+#include "../include/stack.h"
 
-const string TArithmetic::Lexem::Get() const
+std::map<std::string, double> valueVar;
+std::map<std::string, double>* valueVarPtr = &valueVar;
+
+Lexems::Lexems() { }
+
+Lexems::~Lexems() { }
+
+Operator::Operator(char _lex) : Lexems()
+{
+	lex = _lex;
+	if (lex == "~")
+		this->priority = 1;
+	else if (lex == "*" || lex == "/")
+		this->priority = 2;
+	else if (lex == "+" || lex == "-")
+		this->priority = 3;
+	else if (lex == "(" || lex == ")")
+		this->priority = 0;
+	else
+		throw std::exception("error");
+}
+
+std::string Operator::whatis()
+{
+	return "Operator";
+}
+
+void Operator::ToDo(Stack<double>& S)
+{
+	const double r_value = S.pop();
+	double l_value;
+	if (lex == "~")
+	{
+		S.push((-1) * r_value);
+	}
+	else if (lex == "*")
+	{
+		l_value = S.pop();
+		S.push(l_value * r_value);
+	}
+	else if (lex == "+")
+	{
+		l_value = S.pop();
+		S.push(l_value + r_value);
+	}
+	else if (lex == "-")
+	{
+		l_value = S.pop();
+		S.push(l_value - r_value);
+	}
+	else if (lex == "/")
+	{
+		l_value = S.pop();
+		if (r_value == 0)
+			throw std::exception("Division by zero");
+		S.push(l_value / r_value);
+	}
+	else
+	{
+		throw std::exception("Unknown_operation");
+	}
+}
+
+size_t Operator::prioritet()
+{
+	return priority;
+}
+
+std::string Operator::show()
 {
 	return lex;
 }
-const double TArithmetic::Lexem::Value() const
-{
-	return value;
-}
-const string TArithmetic::Lexem::what() const
-{
-	return label;
-}
 
-TArithmetic::Lexem::~Lexem()
-{
+Operator::~Operator() { }
 
+Operand::Operand(std::string _lex) : Lexems() { lex = _lex; }
+
+std::string Operand::whatis()
+{
+	return "Operand";
 }
 
-TArithmetic::Operation::Operation(const char& data)
+void Operand::ToDo(Stack<double>& S)
 {
-	label = "Operation";
-	lex = data;
-	SetValue(lex);
+	S.push(convert(lex));
 }
 
-void TArithmetic::Operation::SetValue(const string& val)
+size_t Operand::prioritet()
 {
-	if (val == "(" || val == ")")
-	{
-		value = 0.0;
-	}
-	else if (val == "+" || val == "-")
-	{
-		value = 1.0;
-	}
-	else if (val == "*" || val == "/")
-	{
-		value = 2.0;
-	}
-	else if (val == "~")
-	{
-		value = 3.0;
-	}
-	else
-	{
-		value = 4.0;
-	}
+	return 0;
 }
 
-double TArithmetic::Operand::in_Numerical(const string& strlex)
+std::string Operand::show()
 {
-	double degree_ind = 0.0;
-	double set_value = 0.0;
-	double sign = 1.0;
-	double e_degree_ind = 0.0;
-	string after_e = "";
+	return lex;
+}
 
-	if (strlex[0] == '-')
+Operand::~Operand() { }
+
+Var::Var(char _lex) : Lexems() { lex = _lex; }
+
+std::string Var::whatis()
+{
+	return "Var";
+}
+
+void Var::ToDo(Stack<double>& S)
+{
+	if ((*valueVarPtr).find(lex) == (*valueVarPtr).end())
 	{
-		sign *= -1.0;
-		degree_ind--;
+		double val;
+		std::cout << "Enter value for " << lex << ":\n";
+		std::cin >> val;
+		(*valueVarPtr).insert(std::pair<std::string, double>(lex, val));
 	}
-	else if (strlex[0] == '+')
+	S.push((*valueVarPtr).at(lex));
+}
+
+size_t Var::prioritet()
+{
+	return 0;
+}
+
+std::string Var::show()
+{
+	return lex;
+}
+
+Var::~Var() { }
+
+TPostfix::TPostfix(std::string eq)
+{
+	infix_form = new Lexems * [eq.size()];
+	this->infix_size = eq.size();
+	postfix_form = new Lexems * [eq.size()];
+	this->postfix_size = infix_size;
+	start_eq = eq;
+	this->init_infix();
+	this->init_postfix();
+}
+
+void TPostfix::init_infix()
+{
+	size_t index = 0;
+	int counter_bracket = 0;
+	int error_index;
+	for (size_t i = 0; i < infix_size; )
 	{
-		degree_ind--;
-	}
-	if (strlex.find('.') == string::npos)
-	{
-		if (strlex.find('e') != string::npos)
+		if (isOperand(start_eq[i]) || start_eq[i] == ',')
 		{
-			degree_ind += strlex.find('e');
+			std::string operand;
+			bool e_index = false;
+			while (isOperand(start_eq[i]) || start_eq[i] == ',' || start_eq[i] == 'e' || (start_eq[i] == '-' && e_index))
+			{
+				if (start_eq[i] == 'e')
+					e_index = true;
+				if (e_index && start_eq[i + 2] == '-')
+					e_index = false;
+				operand += start_eq[i];
+				i++;
+			}
+			if ((isVar(start_eq[i]) && (isVar(start_eq[i + 1]) || isOperand(start_eq[i + 1]))) || (isOperand(start_eq[i]) && isVar(start_eq[i + 1])))
+				throw lexException("no correct operand", start_eq, i + 1);
+			infix_form[index++] = new Operand(operand);
+		}
+		else if (isOperator(start_eq[i]))
+		{
+			if (start_eq[i] == '(' || int(start_eq[i]) == ')')
+			{
+				counter_bracket += (int(start_eq[i]) - 41) + (int(start_eq[i]) - 40);
+				error_index = i;
+			}
+
+			if (start_eq[i] == '-' && (i == 0 || (!isOperand(start_eq[i - 1]) && !isVar(start_eq[i - 1]))))
+				infix_form[index] = new Operator('~');
+			else
+				infix_form[index] = new Operator(start_eq[i]);
+
+			correctChecker(i, index);
+
+			index++;
+			i++;
+		}
+		else if (isVar(start_eq[i]))
+		{
+			if (i != 0)
+				if (isVar(start_eq[i - 1]) || isOperand(start_eq[i - 1]))
+					throw lexException("no correct var", start_eq, i - 1);
+			if (i >= infix_size)
+				if (isVar(start_eq[i + 1]) || isOperand(start_eq[i + 1]))
+					throw lexException("no correct var", start_eq, i + 1);
+			infix_form[index++] = new Var(start_eq[i]);
+			i++;
 		}
 		else
 		{
-			degree_ind += strlex.size();
+			throw lexException("unidentified lexem", start_eq, i);
 		}
 	}
-	else
-	{
-		degree_ind += strlex.find('.');
 
-	}
-	if (strlex.find('e') != string::npos)
+	if (counter_bracket != 0)
+		throw lexException("no correct set bracket", start_eq, error_index);
+
+	infix_size = index;
+}
+
+void TPostfix::correctChecker(const size_t& i, const size_t index)
+{
+	if (start_eq[i] == '(' && !isOperand(start_eq[i + 1]) && !isVar(start_eq[i + 1]) && start_eq[i + 1] != '(' && start_eq[i + 1] != '-')
+		throw lexException("no correct set bracket", start_eq, i);
+	if (start_eq[i] == ')' && !isOperand(start_eq[i - 1]) && !isVar(start_eq[i - 1]) && start_eq[i - 1] != ')')
+		throw lexException("no correct set bracket", start_eq, i);
+	if (infix_form[index]->prioritet() == 1 && !isOperand(start_eq[i + 1]) && !isVar(start_eq[i + 1]) && start_eq[i + 1] != '(')
+		throw lexException("no correct unary operator", start_eq, i + 1);
+	if ((infix_form[index]->prioritet() == 2 || infix_form[index]->prioritet() == 3) && (index == 0 || index == start_eq.size()))
+		throw lexException("no correct binary operator", start_eq, i);
+	if ((infix_form[index]->prioritet() == 2 || infix_form[index]->prioritet() == 3) && !isOperand(start_eq[i + 1]) && !isVar(start_eq[i + 1]) && start_eq[i + 1] != '(' && start_eq[i + 1] != '-')
+		throw lexException("no correct binary operator", start_eq, i + 1);
+	if ((infix_form[index]->prioritet() == 2 || infix_form[index]->prioritet() == 3) && !isOperand(start_eq[i - 1]) && !isVar(start_eq[i - 1]) && start_eq[i - 1] != ')')
+		throw lexException("no correct binary operator", start_eq, i - 1);
+}
+
+void TPostfix::init_postfix()
+{
+	Stack<Lexems*> S(postfix_size);
+	size_t i = 0;         
+	size_t index = 0;     
+	while (index < infix_size && i < postfix_size)
 	{
-		for (int i = strlex.find('e') + 1; i < strlex.size(); i++)
+		if (infix_form[index]->whatis() == "Operand" || infix_form[index]->whatis() == "Var")
 		{
-			after_e += strlex[i];
+			postfix_form[i++] = infix_form[index];
+			index++;
 		}
-		e_degree_ind = in_Numerical(after_e);
-	}
-	for (const char symb : strlex)
-	{
-		if (symb == 'e')
+
+		else if (infix_form[index]->prioritet() != 0 && infix_form[index]->whatis() == "Operator")
 		{
+			while (!S.isEmpty() && S.view_top()->prioritet() != 0 && S.view_top()->prioritet() <= infix_form[index]->prioritet())
+			{
+				postfix_form[i++] = S.pop();
+			}
+			S.push(infix_form[index++]);
+		}
+
+		else if (!S.isEmpty() && infix_form[index]->show() == ")")
+		{
+			while (S.view_top()->show() != "(")
+			{
+				postfix_form[i++] = S.pop();
+			}
+			S.pop();
+			index++;
+		}
+
+		else
+		{
+			S.push(infix_form[index++]);
+		}
+	}
+
+	while (!S.isEmpty())
+	{
+		postfix_form[i++] = S.pop();
+		index++;
+	}
+
+	postfix_size = i;
+}
+
+double TPostfix::resolve()
+{
+	Stack<double> S(postfix_size);
+	for (size_t i = 0; i < postfix_size; i++)
+		postfix_form[i]->ToDo(S);
+
+	return S.pop();
+}
+
+std::string TPostfix::get_infixLexem()
+{
+	std::string out;
+	for (size_t i = 0; i < infix_size; i++)
+		out += infix_form[i]->show();
+
+	return out;
+}
+
+std::string TPostfix::get_postfixLexem()
+{
+	std::string out;
+	for (size_t i = 0; i < postfix_size; i++)
+		out += postfix_form[i]->show();
+
+	return out;
+}
+
+TPostfix::~TPostfix()
+{
+	for (size_t i = 0; i < infix_size; i++)
+		delete infix_form[i];
+	delete[] infix_form;
+	delete[] postfix_form;
+}
+
+bool isOperand(const char& lexema) noexcept
+{
+	if (int(lexema) >= 48 && int(lexema) <= 57)
+		return true;
+	else
+		return false;
+}
+
+bool isOperator(const char& lexema) noexcept  
+{
+	return (lexema == '*' || lexema == '+' || lexema == '-' || lexema == '/' || lexema == '~' || lexema == '(' || lexema == ')');
+}
+
+bool isVar(const char& lexema) noexcept
+{
+	return ((int(lexema) >= 65 && int(lexema) <= 90) || (int(lexema) >= 97 && int(lexema) <= 122)); 
+}
+
+double convert(const std::string strOperand)
+{
+	size_t i = 0;
+	double result = 0;
+
+	size_t power = 10;
+	for (; strOperand[i] != ',' && i < strOperand.size(); i++) 
+	{
+		if (isOperand(strOperand[i]))
+		{
+			result = result * power + (double(strOperand[i]) - 48);
+		}
+		else
+		{
+			i--;
 			break;
 		}
-		else if (symb != '-' && symb != '+' && symb != '.')
+	}
+
+	if ((i + 2) >= strOperand.size() && strOperand[i] == ',' && strOperand[i + 1] == 'e')
+		throw lexException("no correct number", strOperand, i + 1);
+
+	if ((i + 1) >= strOperand.size() && (strOperand[i] == ','))
+		throw lexException("no correct number", strOperand, i);
+
+	i++;
+
+	for (; i < strOperand.size() && strOperand[i] != 'e'; i++)
+	{
+		if (isOperand(strOperand[i]))
 		{
-			set_value += (symb - '0') * pow(10.0, --degree_ind);
-		}
-	}
-	if (strlex.find('e') != string::npos)
-	{
-		set_value *= pow(10.0, e_degree_ind);
-	}
-	return sign * set_value;
-}
-
-void TArithmetic::Constant::SetValue(const string& val)
-{
-	value = in_Numerical(val);
-}
-
-TArithmetic::Constant::Constant(const string& data)
-{
-	label = "Constant";
-	lex = data;
-	SetValue(lex);
-}
-
-TArithmetic::Variable::Variable(const string& data)
-{
-	label = "Variable";
-	lex = data;
-	value = 0;
-}
-
-void TArithmetic::Variable::SetValue(const string& val)
-{
-	value = in_Numerical(val);
-}
-
-bool TArithmetic::find_operation(const char& tmplex)
-{
-	char operations[7] = { '(', ')', '+', '-', '*', '/' };
-	for (const char lex : operations)
-	{
-		if (lex == tmplex)
-		{
-			return true;
-		}
-	}
-	return false;
-}
-
-bool TArithmetic::aNumber(const char& tmplex)
-{
-	return (tmplex >= '0') && (tmplex <= '9');
-}
-
-bool TArithmetic::isAlpha(const char& tmplex)
-{
-	return (tmplex >= 'a') && (tmplex <= 'z');
-}
-
-const string TArithmetic::find_error()
-{
-	int open_count = 0;
-	int close_count = 0;
-	bool e_already_exists = false;
-	bool point_already_exists = false;
-	char nSym;
-	string wrong_infix = "Unforessen lexem: ";
-
-	wrong_infix += infix[0];
-	if (infix[0] != '-' && !isAlpha(infix[0]) && !aNumber(infix[0]) && infix[0] != '(')
-	{
-		return wrong_infix + "<-";
-	}
-	else
-	{
-		for (int i = 0; i < infix.size() - 1; i++)
-		{
-			nSym = infix[i + 1];
-			wrong_infix += nSym;
-
-			if (infix[i] == '(')
-			{
-				open_count++;
-				if (nSym != '(' && nSym != '-' && (!isAlpha(nSym) || nSym == 'e') && !aNumber(nSym))
-				{
-					return wrong_infix + "<-";
-				}
-			}
-			else if (infix[i] == ')')
-			{
-				e_already_exists = false;
-				point_already_exists = false;
-				close_count++;
-				if (nSym == '(' || !find_operation(nSym))
-				{
-					return wrong_infix + "<-";
-				}
-			}
-			else if (find_operation(infix[i]))
-			{
-				if (i != 0 && infix[i - 1] != 'e')
-				{
-					e_already_exists = false;
-					point_already_exists = false;
-				}
-				if (nSym != '-' && nSym != '(' && (!isAlpha(nSym) || nSym == 'e') && !aNumber(nSym))
-				{
-					return wrong_infix + "<-";
-				}
-			}
-			else if (isAlpha(infix[i]) && infix[i] != 'e')
-			{
-				if (!isAlpha(nSym) && (nSym == '(' || !find_operation(nSym)))
-				{
-					return wrong_infix + "<-";
-				}
-			}
-			else if (aNumber(infix[i]))
-			{
-				if (nSym == '.')
-				{
-					if (point_already_exists || e_already_exists)
-					{
-						return wrong_infix + "<-";
-					}
-				}
-				else if (!aNumber(nSym) && (nSym == '(' || !find_operation(nSym)) && (nSym != 'e' || e_already_exists))
-				{
-					return wrong_infix + "<-";
-				}
-			}
-			else if (infix[i] == '.')
-			{
-				point_already_exists = true;
-				if (!aNumber(nSym) && nSym != 'e' && (!find_operation(nSym) || nSym == '('))
-				{
-					return wrong_infix + "<-";
-				}
-			}
-			else if (infix[i] == 'e')
-			{
-				e_already_exists = true;
-				if (i == 0)
-				{
-					return wrong_infix + "<-" + "(invalid use of 'e' lexem)";
-				}
-				else if (!aNumber(infix[i - 1]) && infix[i - 1] != '.' || nSym != '-' && nSym != '+' && !aNumber(nSym))
-				{
-					return wrong_infix + "<-" + "(invalid use of 'e' lexem)";
-				}
-			}
-			else
-			{
-				return wrong_infix + "<-";
-			}
-		}
-	}
-	char lSym = infix[infix.size() - 1];
-	if (lSym == ')')
-	{
-		close_count++;
-	}
-	else if ((!isAlpha(lSym) || lSym == 'e') && !aNumber(lSym) && (lSym != '.' || point_already_exists || e_already_exists))
-	{
-		return wrong_infix += "<-";
-	}
-	if (open_count != close_count)
-	{
-		return "Number of opening and closing brackets does not match";
-	}
-	return "CORRECT";
-}
-
-bool TArithmetic::check_input(const string& inp)
-{
-	char nSym;
-	char pSym;
-	bool e_already_exists = false;
-	bool point_already_exists = false;
-
-	if (inp[0] != '-' && !aNumber(inp[0]))
-	{
-		return false;
-	}
-	for (int i = 1; i < inp.size() - 1; i++)
-	{
-		nSym = inp[i + 1];
-		pSym = inp[i - 1];
-
-		if (aNumber(inp[i]))
-		{
-			if (!aNumber(nSym) && nSym != '.' && nSym != 'e')
-			{
-				return false;
-			}
-		}
-		else if (inp[i] == '.')
-		{
-			if (point_already_exists || e_already_exists || !aNumber(pSym) || !aNumber(nSym) && nSym != 'e')
-			{
-				return false;
-			}
-			point_already_exists = true;
-		}
-		else if (inp[i] == 'e')
-		{
-			if (e_already_exists || !aNumber(pSym) && pSym != '.' || !aNumber(nSym) && nSym != '-' && nSym != '+')
-			{
-				return false;
-			}
-			e_already_exists = true;
-		}
-		else if (inp[i] == '-' || inp[i] == '+')
-		{
-			if (pSym != 'e' || !aNumber(nSym))
-			{
-				return false;
-			}
+			result += (double(strOperand[i]) - 48) / power;
+			power *= 10;
 		}
 		else
-		{
-			return false;
-		}
+			throw lexException("no correct number", strOperand, i - 1);
 	}
-	if (!aNumber(inp[inp.size() - 1]) && (inp[inp.size() - 1] != '.' || point_already_exists || e_already_exists))
-	{
-		return false;
-	}
-	return true;
-}
 
-void TArithmetic::parser()
-{
-	string multilex = "_";
-	int j = -1;
-	for (int i = 0; i < infix.size(); i++)
+	if (i >= strOperand.size() - 1 && strOperand[i] == 'e')
+		throw lexException("no correct number", strOperand, i);
+
+	if (i >= strOperand.size() - 1)
+		return result;
+
+	i++;
+
+	int sign_num = 1;
+	double power_num = 0;
+	if (strOperand[i] == '-')
 	{
-		if (find_operation(infix[i]) && multilex[multilex.size() - 1] != 'e')
+		sign_num = -1;
+		i++;
+	}
+	power = 1;
+
+	while (i < strOperand.size())
+	{
+		if (isOperand(strOperand[i]))
 		{
-			if (infix[i] == '-' && (i == 0 || (find_operation(infix[i - 1]) && infix[i - 1] != ')')))
-			{
-				lexems[++j] = new Operation('~');
-			}
-			else
-			{
-				if (infix[i] == '(' || infix[i] == ')')
-				{
-					postfix_count--;
-				}
-				if (i != 0 && infix[i - 1] != ')' && infix[i] != '(')
-				{
-					if (aNumber(infix[i - 1]) || infix[i - 1] == '.')
-					{
-						lexems[++j] = new Constant(multilex);
-					}
-					else
-					{
-						lexems[++j] = new Variable(multilex);
-					}
-					multilex = "_";
-				}
-				lexems[++j] = new Operation(infix[i]);
-			}
-			operations_count++;
+			power_num = power_num * power + (double(strOperand[i]) - 48);
+			power *= 10;
+			i++;
 		}
 		else
-		{
-			if (multilex == "_")
-			{
-				multilex = infix[i];
-			}
-			else
-			{
-				multilex += infix[i];
-			}
-		}
+			throw lexException("no correct number", strOperand, i - 1);
 	}
-	if (infix[infix.size() - 1] != ')')
-	{
-		if (aNumber(infix[infix.size() - 1]) || infix[infix.size() - 1] == '.')
-		{
-			lexems[++j] = new Constant(multilex);
-		}
-		else
-		{
-			lexems[++j] = new Variable(multilex);
-		}
-	}
-	lexems_count = j + 1;
-	postfix_count += lexems_count;
-}
+	result *= std::pow(10, power_num * sign_num);
 
-void TArithmetic::toPostfix()
-{
-	const int operations_size = (operations_count == 0) ? 1 : operations_count;
-	Stack<Lexem*> operations(operations_size);
-	int j = -1;
-	for (int i = 0; i < lexems_count; i++)
-	{
-		if (lexems[i]->what() == "Operation")
-		{
-			if (!operations.Empty())
-			{
-				if (lexems[i]->Get() == ")")
-				{
-					operations_count -= 2;
-					while (operations.show_top()->Get() != "(")
-					{
-						postfix[++j] = operations.pop();
-					}
-					operations.pop();  // pop "("
-				}
-				else if (lexems[i]->Get() != "(" && lexems[i]->Get() != "~")
-				{
-					while (!operations.Empty() && operations.show_top()->Value() >= lexems[i]->Value())
-					{
-						postfix[++j] = operations.pop();
-					}
-				}
-			}
-			if (lexems[i]->Get() != ")")
-			{
-				operations.push(lexems[i]);
-			}
-		}
-		else
-		{
-			postfix[++j] = lexems[i];
-		}
-	}
-	while (!operations.Empty())
-	{
-		postfix[++j] = operations.pop();
-	}
-}
-
-TArithmetic::TArithmetic(const string& inf) : infix(inf)
-{
-	const string check = find_error();
-	if (check != "CORRECT")  // if error exists
-	{
-		throw "Incorrect infix form! " + check;
-	}
-	lexems = new Lexem * [infix.size()];
-	parser();
-	postfix = new Lexem * [postfix_count];
-	toPostfix();
-}
-
-const string TArithmetic::GetPostfix() const
-{
-	string tmp = postfix[0]->Get();
-	for (int i = 1; i < postfix_count; i++)
-	{
-		if (postfix[i]->Get() == "~")
-		{
-			tmp += " -";
-		}
-		else
-		{
-			tmp += " " + postfix[i]->Get();
-		}
-	}
-	return tmp;
-}
-
-const double TArithmetic::Calculate()
-{
-	Stack<double> values(postfix_count - operations_count);
-	std::map<string, string> operands;
-	string input_value;
-	int i;
-	for (i = 0; i < postfix_count; i++)
-	{
-		if (postfix[i]->what() == "Variable")
-		{
-			if (!operands.count(postfix[i]->Get()))
-			{
-				std::cout << std::endl << postfix[i]->Get() << " = ";
-				std::getline(std::cin, input_value);
-
-				if (!check_input(input_value))
-				{
-					throw "Bad input: " + input_value;
-				}
-				operands.insert({ postfix[i]->Get(), input_value });
-			}
-			postfix[i]->SetValue(operands[postfix[i]->Get()]);
-		}
-	}
-	double rvalue;
-	double lvalue;
-	for (i = 0; i < postfix_count; i++)
-	{
-		if (postfix[i]->what() == "Constant" || postfix[i]->what() == "Variable")
-		{
-			values.push(postfix[i]->Value());
-		}
-		else
-		{
-			if (postfix[i]->Get() == "~")
-			{
-				values.push(-values.pop());
-			}
-			else if (postfix[i]->Get() == "+")
-			{
-				values.push(values.pop() + values.pop());
-			}
-			else if (postfix[i]->Get() == "-")
-			{
-				values.push(-values.pop() + values.pop());
-			}
-			else if (postfix[i]->Get() == "*")
-			{
-				values.push(values.pop() * values.pop());
-			}
-			else if (postfix[i]->Get() == "/")
-			{
-				rvalue = values.pop();
-				if (rvalue == 0.0)
-				{
-					string ZeroDivisionError = "ERROR: Division by zero";
-					throw ZeroDivisionError;
-				}
-				lvalue = values.pop();
-				values.push(lvalue / rvalue);
-			}
-		}
-	}
-	return values.pop();
-}
-
-TArithmetic::~TArithmetic()
-{
-	for (int i = 0; i < lexems_count; i++)
-	{
-		delete lexems[i];
-	}
-	delete[] lexems;
-	delete[] postfix;
+	return result;
 }
